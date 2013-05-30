@@ -401,6 +401,10 @@ process_proc_node(p, s, ss, l, ls)
 		/* Lf->ntype = Ntype = N_REGLR;		by alloc_lfile() */
 		process_proc_sock(p, s, ss, l, ls);
 		return;
+	    case 0:
+		if (!strcmp(p, "anon_inode"))
+		    Lf->ntype = Ntype = N_ANON_INODE;
+		break;
 	    }
 	}
 	if (Selinet)
@@ -503,9 +507,13 @@ process_proc_node(p, s, ss, l, ls)
 		tn = "VTXT";
 		break;
 	    default:
-		(void) snpf(Lf->type, sizeof(Lf->type), "%04o",
-		    ((type >> 12) & 0xf));
-		tn = (char *)NULL;
+		if (Ntype == N_ANON_INODE) {
+		    tn = "a_inode";
+		} else {
+		    (void) snpf(Lf->type, sizeof(Lf->type), "%04o",
+				((type >> 12) & 0xf));
+		    tn = (char *)NULL;
+		}
 	    }
 	} else
 	    tn = "unknown";

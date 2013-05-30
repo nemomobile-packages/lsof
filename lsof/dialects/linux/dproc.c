@@ -81,7 +81,7 @@ static short Ckscko;			/* socket file only checking status:
  */
 
 _PROTOTYPE(static int get_fdinfo,(char *p, struct l_fdinfo *fi));
-_PROTOTYPE(static int getlinksrc,(char *ln, char *src, int srcl));
+_PROTOTYPE(static int getlinksrc,(char *ln, char *src, int srcl, char** rest));
 _PROTOTYPE(static int isefsys,(char *path, char *type, int l,
 			       efsys_list_t **rep, struct lfile **lfr));
 _PROTOTYPE(static int nm2id,(char *nm, int *id, int *idl));
@@ -440,13 +440,17 @@ get_fdinfo(p, fi)
 
 
 static int
-getlinksrc(ln, src, srcl)
+getlinksrc(ln, src, srcl, rest)
 	char *ln;			/* link path */
 	char *src;			/* link source path return address */
 	int srcl;			/* length of src[] */
+	char **rest;                    /* string after `:' of link source path */
 {
 	char *cp;
 	int ll;
+
+	if (rest)
+	    *rest = NULL;
 
 	if ((ll = readlink(ln, src, srcl - 1)) < 1
 	||  ll >= srcl)
@@ -457,6 +461,8 @@ getlinksrc(ln, src, srcl)
 	if ((cp = strchr(src, ':'))) {
 	    *cp = '\0';
 	    ll = strlen(src);
+	    if (rest)
+		*rest = cp + 1;
 	}
 	return(ll);
 }
@@ -795,6 +801,7 @@ process_id(idp, idpl, cmd, uid, pid, ppid, pgid, tid)
 	static char *pathi = (char *)NULL;
 	static int pathil = 0;
 	int txts = 0;
+	char* rest;
 
 #if	defined(HASSELINUX)
 	cntxlist_t *cntxp;
@@ -825,7 +832,7 @@ process_id(idp, idpl, cmd, uid, pid, ppid, pgid, tid)
 	    (void) make_proc_path(idp, idpl, &path, &pathl, "cwd");
 	    alloc_lfile(CWD, -1);
 	    efs = 0;
-	    if (getlinksrc(path, pbuf, sizeof(pbuf)) < 1) {
+	    if (getlinksrc(path, pbuf, sizeof(pbuf), NULL) < 1) {
 		if (!Fwarn) {
 		    (void) memset((void *)&sb, 0, sizeof(sb));
 		    lnk = ss = 0;
@@ -873,7 +880,7 @@ process_id(idp, idpl, cmd, uid, pid, ppid, pgid, tid)
 	if (!Ckscko) {
 	    (void) make_proc_path(idp, idpl, &path, &pathl, "root");
 	    alloc_lfile(RTD, -1);
-	    if (getlinksrc(path, pbuf, sizeof(pbuf)) < 1) {
+	    if (getlinksrc(path, pbuf, sizeof(pbuf), NULL) < 1) {
 		if (!Fwarn) {
 		    (void) memset((void *)&sb, 0, sizeof(sb));
 		    lnk = ss = 0;
@@ -921,7 +928,7 @@ process_id(idp, idpl, cmd, uid, pid, ppid, pgid, tid)
 	    txts = 0;
 	    (void) make_proc_path(idp, idpl, &path, &pathl, "exe");
 	    alloc_lfile("txt", -1);
-	    if (getlinksrc(path, pbuf, sizeof(pbuf)) < 1) {
+	    if (getlinksrc(path, pbuf, sizeof(pbuf), NULL) < 1) {
 		(void) memset((void *)&sb, 0, sizeof(sb));
 		lnk = ss = 0;
 		if (!Fwarn) {
@@ -1044,7 +1051,7 @@ process_id(idp, idpl, cmd, uid, pid, ppid, pgid, tid)
 		continue;
 	    (void) make_proc_path(dpath, i, &path, &pathl, fp->d_name);
 	    (void) alloc_lfile((char *)NULL, fd);
-	    if (getlinksrc(path, pbuf, sizeof(pbuf)) < 1) {
+	    if (getlinksrc(path, pbuf, sizeof(pbuf), &rest) < 1) {
 		(void) memset((void *)&sb, 0, sizeof(sb));
 		lnk = ss = 0;
 		if (!Fwarn) {
@@ -1137,6 +1144,8 @@ process_id(idp, idpl, cmd, uid, pid, ppid, pgid, tid)
 		}
 		if (pn) {
 		    process_proc_node(lnk ? pbuf : path, &sb, ss, &lsb, ls);
+		    if (Lf->ntype == N_ANON_INODE)
+			enter_nm(rest);
 		    if (Lf->sf)
 			link_lfile();
 		}

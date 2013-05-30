@@ -349,6 +349,7 @@ static struct utmp dummy_utmp;		/* to get login name length */
 #define	N_VXFS		51		/* Veritas file system node */
 #define	N_XFS		52		/* XFS node */
 #define	N_ZFS		53		/* ZFS node */
+#define N_ANON_INODE	54              /* inode on linux anon_inodefs */
 
 # if	!defined(OFFDECDIG)
 #define	OFFDECDIG	8		/* maximum number of digits in the
